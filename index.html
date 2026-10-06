@@ -586,10 +586,14 @@ function phoneMain(){
   }
   /* 기울여서 운전하기 */
   const tilt={has:false,ang:0,ref:null,ready:false,btn:0,lastCnt:0};
-  addEventListener('devicemotion',e=>{const a=e.accelerationIncludingGravity;if(!a||a.x==null||a.y==null)return;if(Math.hypot(a.x,a.y)<2.5)return;
-    tilt.ang=Math.atan2(a.x,a.y)*180/Math.PI;tilt.has=true;if(tilt.ref==null)tilt.ref=tilt.ang},true);
-  function steerVal(){if(tilt.btn)return tilt.btn;if(!tilt.has||tilt.ref==null)return 0;let d=tilt.ang-tilt.ref;while(d>180)d-=360;while(d<-180)d+=360;
-    if(Math.abs(d)<3)return 0;return Math.max(-1,Math.min(1,(d-Math.sign(d)*3)/30))}
+  /* 화면의 오른쪽 가장자리가 내려가면(오른쪽으로 기울이면) 오른쪽 — 핸들처럼 돌리든, 옆으로 기울이든 같아요 */
+  const IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const scrAngle=()=>{const a=(screen.orientation&&typeof screen.orientation.angle==='number')?screen.orientation.angle:(typeof window.orientation==='number'?window.orientation:0);return((a%360)+360)%360};
+  addEventListener('devicemotion',e=>{const a=e.accelerationIncludingGravity;if(!a||a.x==null||a.y==null)return;
+    const r=scrAngle()*Math.PI/180,sx=a.x*Math.cos(r)-a.y*Math.sin(r);
+    tilt.ang=(IOS?1:-1)*sx/9.81;tilt.has=true;if(tilt.ref==null)tilt.ref=tilt.ang},true);
+  function steerVal(){if(tilt.btn)return tilt.btn;if(!tilt.has||tilt.ref==null)return 0;const d=tilt.ang-tilt.ref;
+    if(Math.abs(d)<.05)return 0;return Math.max(-1,Math.min(1,(d-Math.sign(d)*.05)/.45))}
   function enableTilt(){
     let pr=null;try{if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function')pr=DeviceMotionEvent.requestPermission()}catch(e){}
     try{const el=document.documentElement;if(!document.fullscreenElement&&el.requestFullscreen)el.requestFullscreen().then(()=>{try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock(screen.orientation.type).catch(()=>{})}catch(x){}}).catch(()=>{})}catch(e){}
@@ -688,6 +692,7 @@ function tvMain(){
   const RAW=store.get('fg-tv',{})||{};const S=Object.assign({},DEF,RAW);const save=()=>store.set('fg-tv',S);
   if(RAW.ver!==GAMEVER){Object.assign(S,GDEF);S.ver=GAMEVER;save()}
   if(RAW.carV!==2){S.carSec=60;S.carV=2;save()}
+  if(RAW.steerV!==3){S.steerFlip=false;S.steerV=3;save()}
   if(!S.phoneUrl){S.phoneUrl='https://ysmtko-code.github.io/undonghoe/';save()}
   const H={game:'lobby',phase:'ready',round:Math.floor(Date.now()/1000)%1000000,cnt:0,tip:'',cmd:null,turn:null,order:null,names:S.names};
   let players={},FLAG={id:0,a:null};
@@ -743,6 +748,7 @@ function tvMain(){
         else{const used=new Set(Object.values(roster).filter(x=>x&&x.team===team).map(x=>x.num));let n=1;while(used.has(n))n++;r={team,num:n}}
         roster[pid]=r;store.set('sd-roster',roster);
       }
+      if(S.practice)delete players['bot'+team+'_'+r.num];
       c._pid=pid;const old=players[pid];
       players[pid]={team,num:r.num,online:true,_c:c,seen:Date.now(),taps:old&&old.team===team?old.taps:0,round:old?old.round:-1,joined:old?old.joined:Date.now()};
       try{c.send({t:'you',team,num:r.num});c.send({t:'state',s:H})}catch(e){}
@@ -759,12 +765,11 @@ function tvMain(){
   }
   function makeBots(){players={};for(const k of [0,1])for(let i=1;i<=10;i++)players[`bot${k}_${i}`]={team:k,num:i,taps:0,round:-1,online:true,joined:i,rate:4.5+Math.random()*2,acc:0,f:.3+Math.random()*.6,ph:Math.random()*6}}
   function kickAll(){
-    if(S.practice){makeBots();onPlayers();return}
-    broadcast({t:'kick'});players={};roster={};counters[0]=counters[1]=0;store.set('sd-roster',roster);onPlayers();
+    broadcast({t:'kick'});players={};roster={};counters[0]=counters[1]=0;store.set('sd-roster',roster);if(S.practice)makeBots();onPlayers();
   }
   function netWarn(){
     const w=$('#netWarn');
-    if(S.practice)w.innerHTML=`<div class="warn">지금은 <b>연습 모드</b>예요. 가상 선수 20명이 대신 두드려요. 실제 행사 때는 설정에서 연습 모드를 끄세요.</div>`;
+    if(S.practice)w.innerHTML=`<div class="warn">지금은 <b>연습 모드</b>예요. 빈 자리는 <b>가상 선수</b>가 채우고, <b>내 태블릿</b>도 QR로 함께 들어올 수 있어요. 들어온 번호는 가상 선수 대신 내가 직접 해요. 실제 행사 때는 설정에서 연습 모드를 끄세요.</div>`;
     else if(!window.Peer)w.innerHTML=`<div class="warn">인터넷에 연결되어 있지 않아요. TV 컴퓨터의 인터넷을 확인한 뒤 새로 고침(F5) 해 주세요.</div>`;
     else if(!S.phoneUrl)w.innerHTML=`<div class="warn">처음 한 번만: 오른쪽 위 <b>설정</b>에서 <b>핸드폰 주소</b>(GitHub 주소)를 넣어 주세요. 먼저 구경만 하시려면 <b>연습 모드</b>를 켜세요.</div>`;
     else w.innerHTML='';
@@ -780,15 +785,16 @@ function tvMain(){
     $('#badge').innerHTML=`${S.practice?'<b>연습 모드</b>':live?'<b>● 연결 준비 완료</b>':'연결 준비 중...'}<br>${esc(S.names[0])} ${T[0].n}명 · ${esc(S.names[1])} ${T[1].n}명`;
   }
   let lobbyDraw=null;
-  function onPlayers(){badge();if(lobbyDraw)lobbyDraw();const tk={0:[],1:[]};onlineList().forEach(p=>tk[p.team].push(p.num));H.taken=tk;broadcast({t:'state',s:H})}
+  function onPlayers(){badge();if(lobbyDraw)lobbyDraw();const tk={0:[],1:[]};onlineList().filter(p=>!String(p.pid).startsWith('bot')).forEach(p=>tk[p.team].push(p.num));H.taken=tk;broadcast({t:'state',s:H})}
   function phoneUrl(){const base=(S.phoneUrl||'').trim();if(!base)return '';try{const u=new URL(base);u.search='';u.hash='';u.searchParams.set('id',tvId());u.searchParams.set('v',QRV);return u.toString()}catch(e){return ''}}
   setInterval(()=>{const now=Date.now();let ch=false;for(const p of Object.values(players)){if(p._c&&p.online!==false&&now-(p.seen||0)>6000){p.online=false;ch=true}}if(ch)onPlayers()},1000);
-  if(S.practice)makeBots();else startPeer();
+  if(S.practice)makeBots();startPeer();
 
   /* 연습용 가상 선수 */
   function botStep(dt){
     if(!S.practice)return;const now=performance.now();
     for(const [pid,p] of Object.entries(players)){
+      if(!pid.startsWith('bot'))continue;
       if(p.round!==H.round){p.round=H.round;p.taps=0;p.acc=0;p.ans=null;p._c=null}
       if(H.phase!=='go')continue;
       if(H.game==='flag'){
@@ -1169,7 +1175,7 @@ function tvMain(){
   /* ===== 선수 입장 ===== */
   function gLobby(){
     const url=phoneUrl();
-    const msg=S.practice?'연습 모드에서는 QR코드가 필요 없어요':!S.phoneUrl?'설정에서 핸드폰 주소를 넣어 주세요':!window.Peer?'인터넷 연결을 확인해 주세요':!live?'연결 준비 중이에요...':'';
+    const msg=!S.phoneUrl?'설정에서 핸드폰 주소를 넣어 주세요':!window.Peer?'인터넷 연결을 확인해 주세요':!live?'연결 준비 중이에요...':'';
     $('#stage').innerHTML=`<div class="lobby"><div class="qr"><div id="qrbox"></div><div class="qrurl">${esc(msg)}</div></div>
       <div><div class="steps">① 핸드폰 <b>카메라</b>로 QR코드를 찍어요<br>② 나오는 주소를 눌러요<br>③ <b>${esc(S.names[0])}</b>이나 <b>${esc(S.names[1])}</b>을 눌러요</div>
       <div class="cnt2 display" id="lc"></div><div class="chips" id="lchips"></div>
@@ -1489,7 +1495,7 @@ function tvMain(){
     }
     place();
     $('#throw').onclick=doThrow;
-    $('#stop').onclick=()=>{if(on)forceEnd=true};
+    $('#stop').onclick=()=>{if(on){forceEnd=true;return}if(running){clearT();decide=null;setH({game:'yut',tip:TIPS.yut});endRound();$('#go').disabled=false;$('#yres').textContent='';$('#call').textContent='멈췄어요. 시작을 누르면 다시 해요'}};
     let decide=null;
     const nextInfo=()=>{$('#call').style.color='';$('#call').textContent=yutFirst==null?'시작을 누르면 선공을 정해요':`이번 판은 ${S.names[yutFirst]} 먼저 (지난 판 승리)`};nextInfo();
     $('#go').insertAdjacentHTML('afterend','<button class="btn small" id="yreset">선공 다시 정하기</button>');
