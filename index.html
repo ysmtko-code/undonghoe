@@ -50,6 +50,8 @@ html.isphone,html.isphone body{overflow:hidden;overscroll-behavior:none;touch-ac
 .fbtn{height:min(26vh,210px);border-radius:28px;font-family:'Black Han Sans',sans-serif;font-size:clamp(50px,15vw,90px);border:10px solid #fff;box-shadow:0 10px 0 rgba(0,0,0,.3);cursor:pointer;touch-action:manipulation}
 .fbtn.b{background:var(--blue);color:#fff}.fbtn.wf{background:#fff;color:var(--ink);border-color:var(--ink)}
 .fbtn.off{opacity:.35}.fbtn.hit{transform:scale(.95)}
+.fbtn.yc{font-size:clamp(30px,8vw,58px);height:min(24vh,200px);line-height:1.15}.fbtn.yc small{display:block;font-size:.5em}
+.fbtn.yc.c0{background:#F4B400;color:#1B2430}.fbtn.yc.c1{background:#2BB673;color:#fff}.fbtn.yc.sel{outline:10px solid #F4B400;outline-offset:4px}
 .pcount{font-size:clamp(26px,7.5vw,46px)}
 .plink{background:transparent;border:0;color:#fff;opacity:.6;font-size:16px;text-decoration:underline;cursor:pointer;margin-top:6px}
 
@@ -163,6 +165,17 @@ html.isphone,html.isphone body{overflow:hidden;overscroll-behavior:none;touch-ac
 .tok{position:absolute;width:9%;aspect-ratio:1;border-radius:50%;background:var(--bg);color:var(--fg);border:4px solid #fff;transform:translate(-50%,-50%);display:grid;place-items:center;font-family:'Black Han Sans',sans-serif;font-size:clamp(16px,1.8vw,32px);transition:left .3s,top .3s;z-index:2;box-shadow:0 5px 0 rgba(0,0,0,.3)}
 .tok.w{border-color:var(--ink)}
 .tok.home{outline:6px solid var(--yellow)}
+.yghost{position:absolute;width:9%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);display:grid;place-items:center;font-family:'Black Han Sans',sans-serif;font-size:clamp(16px,2vw,34px);border:4px dashed #fff;z-index:3;color:#1B2430;animation:ygp .7s infinite alternate}
+@keyframes ygp{from{transform:translate(-50%,-50%) scale(.9)}to{transform:translate(-50%,-50%) scale(1.15)}}
+.ychp{position:fixed;right:2vw;top:50%;transform:translateY(-42%);z-index:36;display:flex;flex-direction:column;align-items:center;gap:12px;width:min(46vw,760px);pointer-events:auto}
+.ychp.hidden{display:none}
+.ychp .q{font-family:'Black Han Sans',sans-serif;font-size:clamp(26px,3vw,56px);color:#fff;background:rgba(0,0,0,.6);padding:.08em .8em;border-radius:18px;text-align:center}
+.ychp .opts{display:flex;flex-direction:column;gap:2.2vh;width:100%}
+.ychb{flex:1;border-radius:26px;border:7px solid #fff;padding:.35em .4em;font-family:'Black Han Sans',sans-serif;font-size:clamp(28px,3vw,58px);cursor:pointer;box-shadow:0 9px 0 rgba(0,0,0,.35);line-height:1.15}
+.ychb.o0{background:#F4B400;color:#1B2430}.ychb.o1{background:#2BB673;color:#fff}
+.ychb small{display:block;font-size:.5em;margin-top:.2em}
+.ychb .vn{display:inline-block;margin-top:.25em;font-size:.55em;background:rgba(0,0,0,.25);border-radius:999px;padding:.05em .7em}
+.ychp .tbar{width:80%;height:14px;border-radius:9px;background:rgba(0,0,0,.4);overflow:hidden}.ychp .tbar i{display:block;height:100%;background:#fff;width:100%}
 .sticks{display:flex;gap:16px;justify-content:center;margin-top:14px}
 .sticks i{width:clamp(34px,3vw,56px);height:clamp(120px,12vw,210px);border-radius:30px;background:#7a4a21;box-shadow:inset -8px 0 0 rgba(0,0,0,.2);position:relative}
 .sticks i.f{background:#F3D9A4;box-shadow:inset -4px 0 0 rgba(0,0,0,.1)}
@@ -510,7 +523,7 @@ function phoneMain(){
   let me0=store.get(MEKEY,null)||store.get('sd-me-'+TVID,null);
   const ut=QS.get('t'),un=+QS.get('n');if(!me0&&(ut==='0'||ut==='1')&&un>0)me0={team:+ut,num:un,tok:QS.get('k')||null};
   const markURL=m=>{try{const u=new URL(location.href);if(m){u.searchParams.set('t',m.team);u.searchParams.set('n',m.num);if(m.tok)u.searchParams.set('k',m.tok)}else{['t','n','k'].forEach(x=>u.searchParams.delete(x))}history.replaceState(history.state,'',u.toString())}catch(e){}};
-  let MM=null,mmAt=0,mmX=null,lastCarHint=null,me=me0,lastRx=0,state={},conn=null,connected=false,taps=0,round=-1,dirty=false,myAns={},peer=null,retry=null,openTimer=null;
+  let myYch={},MM=null,mmAt=0,mmX=null,lastCarHint=null,me=me0,lastRx=0,state={},conn=null,connected=false,taps=0,round=-1,dirty=false,myAns={},peer=null,retry=null,openTimer=null;
   let wl=null;const wake=()=>{try{if(navigator.wakeLock&&(!wl||wl.released))navigator.wakeLock.request('screen').then(x=>{wl=x}).catch(()=>{})}catch(e){}};wake();
   document.addEventListener('pointerdown',wake,{capture:true});addEventListener('online',()=>{if(!connected)connect()});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){wake();if(!connected)connect()}});
@@ -588,6 +601,7 @@ function phoneMain(){
         <button class="btn go big" id="calib">핸들 준비 완료</button>
         <div class="lr hidden" id="lr"><button data-d="-1">◀</button><button data-d="1">▶</button></div></div></div>
       <div class="flags hidden" id="flags"><button class="fbtn b" data-v="b">청기</button><button class="fbtn wf" data-v="w">백기</button></div>
+      <div class="flags hidden" id="ych"><button class="fbtn yc c0" data-v="in"></button><button class="fbtn yc c1" data-v="out"></button></div>
       <div class="ptop"><div class="pcount display" id="pCount"></div><button class="plink" id="pLeave">팀 바꾸기</button></div></section>`;
     const tapBtn=$('#tapBtn');
     const downs=new Map();let lastTapAt=0,tokens=2;
@@ -604,6 +618,9 @@ function phoneMain(){
       const c=state.cmd;if(!connected||state.game!=='flag'||state.phase!=='go'||!c||myAns[c.id]!=null)return;
       const v=b.dataset.v;myAns[c.id]=v;send({t:'ans',pid,c:c.id,v});b.classList.add('hit');setTimeout(()=>b.classList.remove('hit'),120);
       try{navigator.vibrate&&navigator.vibrate(30)}catch(x){}render()}));
+    app.querySelectorAll('#ych .fbtn').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();
+      const c=state.ych;if(!connected||state.game!=='yut'||state.phase!=='choose'||!c||!me||c.team!==me.team)return;
+      myYch[c.id]=b.dataset.v;send({t:'ych',pid,id:c.id,v:b.dataset.v});try{navigator.vibrate&&navigator.vibrate(40)}catch(x){}render()}));
     ['contextmenu','dblclick'].forEach(ev=>app.addEventListener(ev,e=>e.preventDefault()));
     $('#calib').onclick=enableTilt;
     app.querySelectorAll('#lr button').forEach(b=>{b.addEventListener('pointerdown',e=>{e.preventDefault();tilt.btn=+b.dataset.d});['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>{tilt.btn=0}))});
@@ -688,7 +705,7 @@ function phoneMain(){
     document.body.style.background=k?'#2A7043':'#173a80';
     const bw=$('#pWho');bw.style.cssText=tstyle(k);bw.classList.toggle('w',k===1);bw.innerHTML=`<span class="pt">${esc(names[k])}</span><span class="pn display">${me.num}</span><span class="pt">번</span>`;
     const isFlag=g==='flag';
-    $('#tapBtn').classList.toggle('hidden',isFlag||g==='award');$('#wheelbox').classList.add('hidden');$('#flags').classList.toggle('hidden',!isFlag);
+    $('#tapBtn').classList.toggle('hidden',isFlag||g==='award');$('#wheelbox').classList.add('hidden');$('#ych').classList.add('hidden');$('#flags').classList.toggle('hidden',!isFlag);
     const tb=$('#tapBtn');tb.style.cssText=tstyle(k);tb.classList.toggle('w',k===1);
     const ok=canTap();tb.classList.toggle('off',!ok);tb.textContent=ok?'톡!':(ph==='count'?String(state.cnt||''):'잠깐만요');
     let s='';
@@ -730,6 +747,12 @@ function phoneMain(){
       else if(ph==='end')s='끝! 잘하셨어요 👏';
       else s=esc(state.tip||'곧 시작해요').replace(/\n/g,'<br>');
     }
+    else if(g==='yut'&&ph==='choose'&&state.ych){
+      const c=state.ych,mine=c.team===k,v=myYch[c.id];$('#tapBtn').classList.add('hidden');
+      if(mine){const box=$('#ych');box.classList.remove('hidden');
+        box.querySelectorAll('.fbtn').forEach((b,j)=>{const o=c.opts[j];b.innerHTML=`${j+1}. ${esc(o[1])}<small>${esc(o[2])}</small>`;b.classList.toggle('sel',v===o[0]);b.classList.toggle('off',!!v&&v!==o[0])});
+        s=v?'눌렀어요! 우리 팀이 고르는 중…':'🛣️ 어느 길로 갈까요?<br>하나를 눌러 주세요'}
+      else s='상대 팀이<br>길을 고르는 중이에요'}
     else if(ph==='wait')s=g==='yut'?'윷을 던지는 중...':'잠깐만요...';
     else if(ph==='go'){
       if(g==='relay'){
@@ -825,6 +848,7 @@ function tvMain(){
     const pl=players[pid];if(pl&&pl._c){pl.seen=Date.now();if(pl.online===false&&pl._c===c){pl.online=true;onPlayers()}}
     if(m.t==='hb'){try{c.send({t:'pong'})}catch(e){}if(m.num&&(!pl||pl._c!==c))doJoin(c,pid,m.team===1?1:0,m.num,m);return}
     if(m.t==='join'){doJoin(c,pid,m.team===1?1:0,m.num,m)    }else if(m.t==='taps'){const p=players[pid];if(p){p.taps=Math.max(0,Math.min(100000,+m.taps||0));p.round=m.round}}
+    else if(m.t==='ych'){if(ychHook)ychHook(pid,m)}
     else if(m.t==='ans'){const p=players[pid];if(p&&H.cmd&&m.c===H.cmd.id&&!(p.ans&&p.ans.c===m.c))p.ans={c:m.c,v:m.v==='b'?'b':m.v==='w'?'w':null}}
     else if(m.t==='st'){const p=players[pid];if(p){p.steer=Math.max(-1,Math.min(1,+m.s||0));p.steerAt=Date.now()}}
     else if(m.t==='leave'){delete players[pid];delete roster[pid];Object.keys(slots).forEach(k2=>{if(slots[k2]&&slots[k2].pid===pid)delete slots[k2]});store.set('sd-slots',slots);store.set('sd-roster',roster);onPlayers()}
@@ -1160,7 +1184,7 @@ function tvMain(){
       g.strokeStyle='#b5402f';g.lineWidth=14;g.strokeRect(10,10,w-20,h-20);g.strokeStyle='#2f5fa8';g.lineWidth=6;g.strokeRect(26,26,w-52,h-52)});
     const mat=new THREE.Mesh(new THREE.BoxGeometry(18,.06,12),new THREE.MeshStandardMaterial({map:matT,roughness:.95}));mat.position.y=.03;mat.receiveShadow=true;S.sc.add(mat);
     const brd=tex3(512,512,(g,w,h)=>{g.fillStyle='#f8efd9';g.fillRect(0,0,w,h);g.strokeStyle='#5b3a1d';g.lineWidth=6;g.strokeRect(64,64,384,384);g.beginPath();g.moveTo(64,64);g.lineTo(448,448);g.moveTo(448,64);g.lineTo(64,448);g.stroke();
-      for(let i=0;i<20;i++){const [x,y]=pt(i);const X=x/100*512,Y=y/100*512;g.fillStyle=i%5===0?'#c0392b':'#5b3a1d';g.beginPath();g.arc(X,Y,i%5===0?26:17,0,7);g.fill()}
+      for(let i=0;i<29;i++){const [x,y]=pt(i);const X=x/100*512,Y=y/100*512,bg=[0,5,10,15,22].includes(i);g.fillStyle=bg?'#c0392b':'#5b3a1d';g.beginPath();g.arc(X,Y,bg?26:17,0,7);g.fill()}
       g.fillStyle='#fff';g.font='bold 22px sans-serif';g.textAlign='center';const [sx,sy]=pt(0);g.fillText('출발',sx/100*512,sy/100*512+8)});
     const board=new THREE.Mesh(new THREE.BoxGeometry(7.2,.12,7.2),new THREE.MeshStandardMaterial({map:brd,roughness:.8}));board.position.set(-4.3,.12,-.3);board.castShadow=board.receiveShadow=true;S.sc.add(board);
     const bxz=i=>{const [x,y]=pt(i);return[-4.3+(x/100-.5)*7.2,-.3+(y/100-.5)*7.2]};
@@ -1177,8 +1201,9 @@ function tvMain(){
     const round=S.mat(0x8a5426,{roughness:.55}),side=S.mat(0x7a4a21);
     const sticks=[0,1,2,3].map(i=>{const m=new THREE.Mesh(new THREE.BoxGeometry(2.3,.2,.42),[side,side,new THREE.MeshStandardMaterial({map:i===3?markT:flatT,roughness:.6}),round,side,side]);
       m.castShadow=true;m.position.set(4.3,CT+.1,-1.6+i*.85);S.sc.add(m);return{m,anim:null}});
-    let pos=[0,0];
-    function placeT(){toks.forEach((t,k)=>{const p=pos[k]>=20?0:pos[k];let [x,z]=bxz(p);if(pos[0]===pos[1])x+=k?.35:-.35;t.target=new THREE.Vector3(x,.18,z);if(pos[k]>=20)t.target.y=.5})}
+    let pos=[0,0];const ghosts=[];
+    S.on((dt,t)=>{ghosts.forEach(o=>{if(o.userData.pulse){const q=1+.18*Math.sin(t*7);o.scale.set(q,q,q)}})});
+    function placeT(){toks.forEach((t,k)=>{const p=pos[k]===99?0:pos[k];let [x,z]=bxz(p);if(pos[0]===pos[1])x+=k?.35:-.35;t.target=new THREE.Vector3(x,.18,z);if(pos[k]===99)t.target.y=.5})}
     placeT();toks.forEach(t=>{t.g.position.copy(t.target)});
     S.on((dt,t)=>{
       toks.forEach(tk=>{const d=tk.target.clone().sub(tk.g.position);if(d.length()>.02){tk.g.position.addScaledVector(d,Math.min(1,dt*8));tk.g.position.y=tk.target.y+Math.min(.8,d.length()*.6)}else tk.g.position.copy(tk.target);tk.g.rotation.y+=dt*.6});
@@ -1194,7 +1219,13 @@ function tvMain(){
           const p=s.m.position;s.anim={t:-i*.05,T:1.25+Math.random()*.2,h:2.8+Math.random()*.8,x0:p.x,z0:p.z,x1:4.3+(Math.random()-.5)*2.6,z1:-.3+(i-1.5)*.95+(Math.random()-.5)*.4,
             wx:(Math.random()-.5)*26,wy:(Math.random()-.5)*10,wz:(Math.random()-.5)*20,q};});
         return 1750},
-      place(a,b){pos=[a,b];placeT()},win(k){S.confetti([0,3,0],[TC3[k],0xF4B400,0xD62839],300)},dispose:S.dispose};
+      place(a,b){pos=[a,b];placeT()},win(k){S.confetti([0,3,0],[TC3[k],0xF4B400,0xD62839],300)},
+      ghost(list,from){ghosts.forEach(o=>S.sc.remove(o));ghosts.length=0;const [fx,fz]=bxz(from==null||from===99?0:from);
+        list.forEach(([n,j])=>{const [x,z]=bxz(n===99?0:n),col=j?'#2BB673':'#F4B400',dl=Math.hypot(x-fx,z-fz)||1,ox=(x-fx)/dl*.45,oz=(z-fz)/dl*.45;
+          const ring=new THREE.Mesh(new THREE.RingGeometry(.42,.62,32),new THREE.MeshBasicMaterial({color:col,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.set(x,.2,z);ring.userData.pulse=1;
+          const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex3(128,128,(g,w,h)=>{g.fillStyle=col;g.beginPath();g.arc(64,64,58,0,7);g.fill();g.lineWidth=8;g.strokeStyle='#fff';g.stroke();g.fillStyle=j?'#fff':'#1B2430';g.font="900 80px 'Black Han Sans',sans-serif";g.textAlign='center';g.textBaseline='middle';g.fillText(String(j+1),64,70)}),depthTest:false}));
+          sp.scale.set(.95,.95,1);sp.position.set(x+ox,1.25,z+oz);sp.renderOrder=11;S.sc.add(ring,sp);ghosts.push(ring,sp)})},
+      dispose:S.dispose};
   }
   /* ---- 시상식 ---- */
   function v3Award(host){
@@ -1505,30 +1536,40 @@ function tvMain(){
   }
 
   /* ===== 윷놀이 ===== */
-  let yutFirst=null;
+  let yutFirst=null,ychHook=null,ychKey=null;
   function gYut(){
     const N=20,NEED=S.yutNeed,RES=[['빽도',-1,.06],['도',1,.2],['개',2,.32],['걸',3,.24],['윷',4,.1],['모',5,.08]];
-    const pt=i=>i<=5?[88,88-15.2*i]:i<=10?[88-15.2*(i-5),12]:i<=15?[12,12+15.2*(i-10)]:[12+15.2*(i-15),88];
+    const pt0=i=>i<=5?[88,88-15.2*i]:i<=10?[88-15.2*(i-5),12]:i<=15?[12,12+15.2*(i-10)]:[12+15.2*(i-15),88];
+    /* 말판: 바깥 0~19, 오른쪽 위 모(5)→가운데→왼쪽 아래 모(15): 20,21,[22=가운데],23,24 / 왼쪽 위 모(10)→가운데→출발점: 25,26,[22],27,28 */
+    const HOME=99,BIGN=[0,5,10,15,22],DG={20:[75.33,24.67],21:[62.67,37.33],22:[50,50],23:[37.33,62.67],24:[24.67,75.33],25:[24.67,24.67],26:[37.33,37.33],27:[62.67,62.67],28:[75.33,75.33]};
+    const pt=n=>n===HOME?pt0(0):n>=20?DG[n]:pt0(n);
+    const BR={5:{in:20,out:6},10:{in:25,out:11},22:{in:27,out:23}};
+    const LBL={5:{in:'가운데 지름길로 ↙',out:'바깥으로 돌아서 ←'},10:{in:'가운데 지름길로 ↘',out:'바깥으로 돌아서 ↓'},22:{in:'결승점 쪽으로 ↘',out:'왼쪽 아래 모로 ↙'}};
+    const nxt=(n,prev)=>n<19?n+1:n===19?HOME:n===20?21:n===21?22:n===22?(prev===26?27:23):n===23?24:n===24?15:n===25?26:n===26?22:n===27?28:HOME;
+    const REM={[HOME]:0};for(let i=0;i<29;i++)REM[i]=99;
+    for(let it=0;it<40;it++)for(let n=0;n<29;n++){const c=BR[n]?[BR[n].in,BR[n].out]:[nxt(n,null)];REM[n]=Math.min(REM[n],1+Math.min(...c.map(x=>REM[x])))}
     $('#stage').innerHTML=`<div class="yut">
       <div class="yboard"><svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M12 12 L88 88 M88 12 L12 88" stroke="rgba(255,255,255,.35)" stroke-width=".8" fill="none"/>
         <rect x="12" y="12" width="76" height="76" fill="none" stroke="rgba(255,255,255,.6)" stroke-width=".8"/></svg>
-        ${Array.from({length:N},(_,i)=>{const [x,y]=pt(i);return `<span class="st ${i%5===0?'big':''}" style="left:${x}%;top:${y}%">${i===0?'출발':''}</span>`}).join('')}
+        ${Array.from({length:29},(_,i)=>{const [x,y]=pt(i);return `<span class="st ${BIGN.includes(i)?'big':''}" style="left:${x}%;top:${y}%">${i===0?'출발':''}</span>`}).join('')}
+        <span class="yghost hidden" id="yg0" style="background:#F4B400">1</span><span class="yghost hidden" id="yg1" style="background:#2BB673;color:#fff">2</span>
         <span class="tok" id="tk0" style="${tstyle(0)}">${esc(S.names[0].slice(0,1))}</span><span class="tok w" id="tk1" style="${tstyle(1)}">${esc(S.names[1].slice(0,1))}</span></div>
       <div><div class="call display mid" id="call">윷놀이</div><div class="sub" id="sub">우리 팀 차례에 모두 두드리면 윷이 던져져요. 한 바퀴 먼저 돌아오면 이겨요!<br>윷·모가 나오거나 상대 말을 잡으면 한 번 더!</div>
         <div class="sticks" id="sticks">${'<i></i>'.repeat(4)}</div><div class="ybig display" id="yres"></div>
         <div class="gauge" style="width:100%"><i id="yg"></i></div>
         <div class="row"><button class="btn go big" id="go">시작</button><button class="btn small" id="throw" disabled>직접 던지기</button><button class="btn small" id="stop">여기서 끝내기</button><button class="btn small hidden" id="ybigbtn">🔍 작게 보기</button></div></div></div>
       <div class="yscore" id="yscore"></div>
-      <div class="yhelp">진행자 안내 · <b>Space/리모컨</b>: 시작 · <b>직접 던지기</b>: 태블릿 없이 던질 때 · <b>Esc</b>: 작게 보기<br>윷·모가 나오거나 상대 말을 잡으면 한 번 더!</div>`;
-    let pos=[0,0],turn=0,on=false,busy=false;const base=[0,0];
+      <div class="ychp hidden" id="ychp"><div class="q" id="ychq"></div><div class="opts"><button class="ychb o0" data-j="0"></button><button class="ychb o1" data-j="1"></button></div><div class="tbar"><i id="ycht"></i></div></div>
+      <div class="yhelp">진행자 안내 · <b>Space/리모컨</b>: 시작 · <b>직접 던지기</b>: 태블릿 없이 던질 때 · <b>Esc</b>: 작게 보기<br>모서리·가운데에 멈추면 길 고르기 (<b>1</b>/<b>2</b> 키)<br>윷·모가 나오거나 상대 말을 잡으면 한 번 더!</div>`;
+    let pos=[0,0],turn=0,on=false,busy=false,ych=null;const base=[0,0],hist=[[],[]];
     const V=(()=>{const h=mount3D('.yut',['.yboard','#sticks'],'min(50vh,46vw)');if(!h)return null;$('.yut').style.gridTemplateColumns='1fr';return v3Yut(h,pt)})();if(V)regClean(V.dispose);
     const yScore=()=>{const el=$('#yscore');if(el)el.innerHTML=[0,1].map(k=>`<span style="${tstyle(k)}">${esc(S.names[k])} ${S.scores[k]}</span>`).join('')};
     const bigView=b=>{const st=$('#stage');st.classList.toggle('yutbig',b);const bt=$('#ybigbtn');if(bt)bt.textContent=b?'🔍 작게 보기':'📺 윷판 크게 보기';yScore();
       [60,400].forEach(ms=>setTimeout(()=>dispatchEvent(new Event('resize')),ms))};
     if(V){$('#ybigbtn').classList.remove('hidden');$('#ybigbtn').onclick=()=>bigView(!$('#stage').classList.contains('yutbig'));bigView(true);
       const ys=setInterval(yScore,1000);regClean(()=>{clearInterval(ys);$('#stage').classList.remove('yutbig')})}
-    function place(){[0,1].forEach(k=>{const p=pos[k]>=N?0:pos[k],[x,y]=pt(p),same=pos[0]===pos[1];const el=$('#tk'+k);
-      el.style.left=`calc(${x}% + ${same?(k?16:-16):0}px)`;el.style.top=y+'%';el.classList.toggle('home',pos[k]>=N)});V&&V.place(pos[0],pos[1])}
+    function place(){[0,1].forEach(k=>{const p=pos[k]===HOME?0:pos[k],[x,y]=pt(p),same=pos[0]===pos[1];const el=$('#tk'+k);
+      el.style.left=`calc(${x}% + ${same?(k?16:-16):0}px)`;el.style.top=y+'%';el.classList.toggle('home',pos[k]===HOME)});V&&V.place(pos[0],pos[1])}
     function showSticks(name){const el=$('#sticks').children,n={빽도:1,도:1,개:2,걸:3,윷:4,모:0}[name];
       let idx=[0,1,2,3].sort(()=>Math.random()-.5).slice(0,n);if(name==='빽도')idx=[3];else if(name==='도')idx=[Math.floor(Math.random()*3)];
       for(let i=0;i<4;i++)el[i].className=(idx.includes(i)?'f':'')+(i===3?' x':'')}
@@ -1544,29 +1585,55 @@ function tvMain(){
       timers.push(setTimeout(()=>{showSticks(name);$('#yres').textContent=name+'!';say(name);
         if(step>=4){SFX.fanfare();confetti([TEAM[turn].bg,'#F4B400'])}else SFX.ding();move(step)},wait));
     }
+    /* 길 계획: 첫 걸음만 고른 방향, 그다음은 그 길을 따라 곧장 */
+    function plan(k,step,ch){const out=[];let cur=pos[k],prev=hist[k][hist[k].length-1];
+      for(let i=0;i<step;i++){const nx=(i===0&&ch&&BR[cur])?BR[cur][ch]:nxt(cur,prev);prev=cur;cur=nx;out.push(cur);if(cur===HOME)break}return out}
+    function walk(k,path,step){let i=0;const one=()=>{if(i>=path.length){afterMove(step);return}hist[k].push(pos[k]);pos[k]=path[i++];SFX.thump();place();timers.push(setTimeout(one,380))};timers.push(setTimeout(one,700))}
     function move(step){
-      const k=turn,dir=step<0?-1:1;let left=Math.abs(step);
-      const one=()=>{
-        if(left<=0||(dir<0&&pos[k]===0)||pos[k]>=N){afterMove(step);return}
-        pos[k]+=dir;left--;SFX.thump();place();timers.push(setTimeout(one,380));
-      };
-      timers.push(setTimeout(one,700));
+      const k=turn;
+      if(step<0){timers.push(setTimeout(()=>{if(hist[k].length){pos[k]=hist[k].pop();SFX.thump();place()}afterMove(step)},700));return}
+      if(BR[pos[k]]){timers.push(setTimeout(()=>ask(k,step,ch=>walk(k,plan(k,step,ch),step)),900));return}
+      walk(k,plan(k,step,null),step);
     }
+    /* 모서리(모)나 가운데에 멈춰 있으면: 어느 길로 갈지 팀이 골라요 */
+    function ask(k,step,cb){
+      const L=LBL[pos[k]],opts=['in','out'].map(key=>{const pl=plan(k,step,key),d=pl[pl.length-1];
+        return{key,label:L[key],dest:d,tag:d===HOME?'🏁 바로 도착!':(d===pos[1-k]&&d!==0?'💥 상대 말을 잡아요!':`도착까지 ${REM[d]}칸 남아요`)}});
+      const id=Date.now()%1e9,dur=Math.max(5,S.yutChoose||12);ych={k,opts,votes:{},cb,id,t0:performance.now(),dur};
+      const box=$('#ychp');$('#ychq').textContent=`${S.names[k]} · 어느 길로 갈까요?`;
+      box.querySelectorAll('.ychb').forEach((b,j)=>{b.onclick=()=>decideCh(j)});drawCh();box.classList.remove('hidden');
+      opts.forEach((o,j)=>{const g=$('#yg'+j),[x,y]=pt(o.dest);g.style.left=x+'%';g.style.top=y+'%';g.classList.remove('hidden')});
+      V&&V.ghost(opts.map((o,j)=>[o.dest,j]),pos[k]);
+      $('#call').textContent=`${S.names[k]} · 길을 골라요!`;$('#yres').textContent='';
+      say(`${S.names[k]}, 어느 길로 갈까요?`);
+      setH({phase:'choose',ych:{team:k,id,opts:opts.map(o=>[o.key,o.label,o.tag])}});
+      if(S.practice){const T=agg()[k];(T.list||[]).forEach(p=>{if(/^bot/.test(p.pid))timers.push(setTimeout(()=>{if(ych&&ych.id===id)ych.votes[p.pid]=Math.random()<.7?'in':'out'},1500+Math.random()*5000))})}
+      ychHook=(pid,m)=>{const pl=players[pid];if(!ych||m.id!==ych.id||!pl||pl.team!==ych.k)return;ych.votes[pid]=m.v==='out'?'out':'in'};
+      ychKey=j=>decideCh(j);
+    }
+    function tally(){const c={in:0,out:0};Object.values(ych.votes).forEach(v=>c[v]++);return c}
+    function drawCh(){if(!ych)return;const c=tally();
+      $('#ychp').querySelectorAll('.ychb').forEach((b,j)=>{const o=ych.opts[j];b.innerHTML=`${j+1}. ${esc(o.label)}<small>${esc(o.tag)}</small><span class="vn">🙋 ${c[o.key]}명</span>`});
+      const left=Math.max(0,1-(performance.now()-ych.t0)/1000/ych.dur);$('#ycht').style.width=(left*100)+'%'}
+    function clearCh(){ych=null;ychHook=null;ychKey=null;const b=$('#ychp');if(b)b.classList.add('hidden');[0,1].forEach(j=>{const g=$('#yg'+j);if(g)g.classList.add('hidden')});V&&V.ghost([])}
+    function decideCh(j){if(!ych)return;const c=ych,o=c.opts[j];clearCh();SFX.ding();
+      $('#call').textContent=`${S.names[c.k]} · ${o.label.replace(/ [↙↘←↓]$/,'')}!`;say(o.label.replace(/ [↙↘←↓]$/,''));setH({phase:'wait',ych:null});c.cb(o.key)}
+    regClean(()=>{ychHook=null;ychKey=null});
     function afterMove(step){
       const k=turn,o=1-k;
-      if(pos[k]>=N){on=false;endRound();$('#go').disabled=false;$('#go').textContent='한 판 더';$('#throw').disabled=true;$('#call').textContent=`${S.names[k]} 도착!`;yutFirst=k;V&&V.win(k);win(k,'yut','윷놀이');return}
+      if(pos[k]===HOME){on=false;endRound();$('#go').disabled=false;$('#go').textContent='한 판 더';$('#throw').disabled=true;$('#call').textContent=`${S.names[k]} 도착!`;yutFirst=k;V&&V.win(k);win(k,'yut','윷놀이');return}
       let again=step>=4;
-      if(pos[k]>0&&pos[k]===pos[o]){pos[o]=0;place();again=true;SFX.pop();shout(`${S.names[k]}\n잡았다!`,k)}
+      if(pos[k]>0&&pos[k]===pos[o]){pos[o]=0;hist[o]=[];place();again=true;SFX.pop();shout(`${S.names[k]}\n잡았다!`,k)}
       timers.push(setTimeout(()=>{$('#yres').textContent='';setTurn(again?k:o,again)},again?1800:1300));
     }
     place();
     $('#throw').onclick=doThrow;
-    $('#stop').onclick=()=>{if(on){forceEnd=true;return}if(running){clearT();decide=null;setH({game:'yut',tip:TIPS.yut});endRound();$('#go').disabled=false;$('#yres').textContent='';$('#call').textContent='멈췄어요. 시작을 누르면 다시 해요'}};
+    $('#stop').onclick=()=>{if(on){forceEnd=true;return}if(running){clearT();clearCh();decide=null;setH({game:'yut',tip:TIPS.yut});endRound();$('#go').disabled=false;$('#yres').textContent='';$('#call').textContent='멈췄어요. 시작을 누르면 다시 해요'}};
     let decide=null;
     const nextInfo=()=>{$('#call').style.color='';$('#call').textContent=yutFirst==null?'시작을 누르면 선공을 정해요':`이번 판은 ${S.names[yutFirst]} 먼저 (지난 판 승리)`};nextInfo();
     $('#go').insertAdjacentHTML('afterend','<button class="btn small" id="yreset">선공 다시 정하기</button>');
     $('#yreset').onclick=()=>{if(running)return;yutFirst=null;nextInfo()};
-    bindGo(()=>{pos=[0,0];place();$('#yres').textContent='';
+    bindGo(()=>{pos=[0,0];hist[0]=[];hist[1]=[];clearCh();place();$('#yres').textContent='';
       if(yutFirst!=null){const k=yutFirst;startRound(()=>{on=true;setTurn(k,false)})}
       else{setH({game:'tug',tip:'선공 정하기!\n빨리 두드려요!'});
         startRound(now=>{decide={t0:now};$('#call').style.color='';$('#call').textContent='선공 정하기! 5초 동안 빨리 두드려요!'})}});
@@ -1578,8 +1645,10 @@ function tvMain(){
           timers.push(setTimeout(()=>{on=true;setTurn(k,false)},2000))}
         return}
       if(!on)return;
-      if(forceEnd){on=false;clearT();endRound();$('#go').disabled=false;$('#go').textContent='한 판 더';$('#throw').disabled=true;
-        const k=pos[0]===pos[1]?null:(pos[0]>pos[1]?0:1);if(k!=null)yutFirst=k;$('#call').textContent=k==null?'무승부!':`${S.names[k]} 승리!`;win(k,'yut','윷놀이');return}
+      if(forceEnd){on=false;clearT();clearCh();endRound();$('#go').disabled=false;$('#go').textContent='한 판 더';$('#throw').disabled=true;
+        const k=REM[pos[0]]===REM[pos[1]]?null:(REM[pos[0]]<REM[pos[1]]?0:1);if(k!=null)yutFirst=k;$('#call').textContent=k==null?'무승부!':`${S.names[k]} 승리!`;win(k,'yut','윷놀이');return}
+      if(ych){drawCh();const c=tally(),n=Math.max(1,agg()[ych.k].n),el=(performance.now()-ych.t0)/1000;
+        if(c.in>n/2)decideCh(0);else if(c.out>n/2)decideCh(1);else if(el>=ych.dur)decideCh(c.out>c.in?1:0);return}
       if(busy)return;const e=agg()[turn].avg-base[turn];$('#yg').style.width=Math.min(100,e/NEED*100)+'%';if(e>=NEED)doThrow();
     };
   }
@@ -2328,6 +2397,7 @@ function tvMain(){
     if(e.key==='Escape'&&$('#stage').classList.contains('yutbig')){const bt=$('#ybigbtn');if(bt)bt.click();return}
     if(e.key==='Escape'&&$('#stage').classList.contains('carbig')){const bt=$('#cbig');if(bt)bt.click();return}
     if($('#scoreov').classList.contains('show')&&['PageDown','ArrowRight',' ','Enter','Escape'].includes(e.key)){e.preventDefault();closeScores();return}
+    if(ychKey&&['1','2','ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();ychKey(e.key==='1'||e.key==='ArrowLeft'?0:1);return}
     if(['PageDown','ArrowRight',' ','Enter'].includes(e.key)){e.preventDefault();ac();const g=$('#go');if(g&&!g.disabled)g.click();return}
     if(/^[1-4]$/.test(e.key)&&levelKey){levelKey(+e.key-1);return}
     if(e.key==='m'||e.key==='M'||e.key==='ㅡ'){ac();MUSIC.toggle(!MUSIC.cfg.on);musLabel()}});
