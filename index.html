@@ -377,8 +377,11 @@ const tstyle=k=>`--bg:${TEAM[k].bg};--fg:${TEAM[k].fg}`;
 const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const QS=new URLSearchParams(location.search);
 const QRV=Date.now().toString(36);
-const TVID=(QS.get('id')||'').replace(/[^a-zA-Z0-9_-]/g,'');
-const IS_TV=!TVID&&(QS.has('tv')||location.protocol==='file:');
+/* TV 주소는 항상 같아요: 컴퓨터·브라우저가 바뀌어도, 예전 QR로 들어와도 같은 TV에 연결돼요 */
+const FIXED_TVID='together-adhc-undonghoe-tv';
+const URLID=(QS.get('id')||'').replace(/[^a-zA-Z0-9_-]/g,'');
+const IS_TV=!URLID&&(QS.has('tv')||location.protocol==='file:');
+const TVID=IS_TV?'':FIXED_TVID;
 
 function makePeer(id){if(!window.Peer)return null;try{return id?new Peer(id,{debug:0}):new Peer({debug:0})}catch(e){return null}}
 
@@ -559,7 +562,7 @@ function phoneMain(){
   let me0=store.get(MEKEY,null)||store.get('sd-me-'+TVID,null);
   const ut=QS.get('t'),un=+QS.get('n');if(!me0&&(ut==='0'||ut==='1')&&un>0)me0={team:+ut,num:un,tok:QS.get('k')||null};
   const markURL=m=>{try{const u=new URL(location.href);if(m){u.searchParams.set('t',m.team);u.searchParams.set('n',m.num);if(m.tok)u.searchParams.set('k',m.tok)}else{['t','n','k'].forEach(x=>u.searchParams.delete(x))}history.replaceState(history.state,'',u.toString())}catch(e){}};
-  let rtt=0,slowN=0,slowFix=0,myYch={},MM=null,mmAt=0,mmX=null,lastCarHint=null,me=me0,lastRx=0,state={},conn=null,connected=false,taps=0,round=-1,dirty=false,myAns={},peer=null,retry=null,openTimer=null;
+  let discAt=0,hardTried=false,rtt=0,slowN=0,slowFix=0,myYch={},MM=null,mmAt=0,mmX=null,lastCarHint=null,me=me0,lastRx=0,state={},conn=null,connected=false,taps=0,round=-1,dirty=false,myAns={},peer=null,retry=null,openTimer=null;
   let wl=null;const wake=()=>{try{if(navigator.wakeLock&&(!wl||wl.released))navigator.wakeLock.request('screen').then(x=>{wl=x}).catch(()=>{})}catch(e){}};wake();
   document.addEventListener('pointerdown',wake,{capture:true});addEventListener('online',()=>{if(!connected)connect()});
   /* 화면이 다시 켜지면: 오래 소식이 없었으면 바로 다시 연결 */
@@ -750,7 +753,7 @@ function phoneMain(){
     const tb=$('#tapBtn');tb.style.cssText=tstyle(k);tb.classList.toggle('w',k===1);
     const ok=canTap();tb.classList.toggle('off',!ok);tb.textContent=ok?'톡!':(ph==='count'?String(state.cnt||''):'잠깐만요');
     let s='';
-    if(!connected)s='TV와 연결하는 중...';
+    if(!connected)s=discAt&&Date.now()-discAt>10000?'⚠️ TV와 연결이 안 됐어요<br><small>TV 화면이 켜져 있는지 확인해 주세요. 저절로 다시 연결해요</small>':'TV와 연결하는 중...';
     else if(!g||g==='lobby')s='곧 시작해요!<br>잠시만 기다려 주세요';
     else if(g==='award')s='수고 많으셨어요! 👏';
     else if(g==='car'){
@@ -822,11 +825,10 @@ function phoneMain(){
     if(connected&&lastRx&&Date.now()-lastRx>7000){connected=false;try{conn&&conn.close()}catch(e){}render();showJoinState();connect()}
     /* 스스로 고치기: 끊긴 채로 오래 있으면 연결을 새로 만들고, 그래도 안 되면 화면을 새로 열어요(번호는 그대로) */
     if(connected){discAt=0;hardTried=false;return}
-    if(!discAt)discAt=Date.now();const d=Date.now()-discAt;
+    if(!discAt)discAt=Date.now();const d=Date.now()-discAt;if(d>10000&&d<12100)render();
     try{if(peer&&!peer.destroyed&&peer.disconnected)peer.reconnect()}catch(e){}
     if(d>15000&&!hardTried){hardTried=true;try{peer&&peer.destroy()}catch(e){}peer=null;connect()}
     if(d>45000&&navigator.onLine!==false&&document.visibilityState==='visible'){leaving=true;location.reload()}},2000);
-  let discAt=0,hardTried=false;
   if(me)showPlay();else showJoin();
   connect();
 }
@@ -863,7 +865,7 @@ function tvMain(){
   let peer=null,live=false,idRetry=0;const conns=new Set();
   let roster=store.get('sd-roster',{});const counters=[0,0];
   Object.values(roster).forEach(r=>{if(r&&(r.team===0||r.team===1))counters[r.team]=Math.max(counters[r.team],r.num||0)});
-  function tvId(){let id=store.get('sd-tvid',null);if(!id){id='together-undong-'+Math.random().toString(36).slice(2,8);store.set('sd-tvid',id)}return id}
+  function tvId(){store.set('sd-tvid',FIXED_TVID);return FIXED_TVID}
   function broadcast(m){for(const c of conns){if(c.open){try{c.send(m)}catch(e){}}}}
   function setH(p){Object.assign(H,p);broadcast({t:'state',s:H});MUSIC.scene(H.game,H.phase)}
   let bc=null,retired=false,peerWait=false;try{bc=new BroadcastChannel('sd-tv');bc.onmessage=e=>{if(e.data&&e.data.t==='newtv'&&e.data.id===tvId()){retired=true;try{peer&&peer.destroy()}catch(x){}live=false;
@@ -872,7 +874,7 @@ function tvMain(){
   function startPeer(){
     peerWait=false;if(retired)return;
     peer=makePeer(tvId());if(!peer){netWarn();return}
-    peer.on('open',()=>{live=true;idRetry=0;badge();netWarn();if(H.game==='lobby'&&!running)gLobby()});
+    peer.on('open',()=>{live=true;idRetry=0;badge();netWarn();if(H.game==='lobby'&&!running&&lobbyDraw)lobbyDraw();if(H.game==='lobby'&&!running)gLobby()});
     peer.on('connection',c=>{
       c.on('open',()=>{conns.add(c);try{c.send({t:'state',s:H})}catch(e){}});
       c.on('data',m=>onMsg(c,m));
@@ -880,7 +882,7 @@ function tvMain(){
       c.on('error',()=>{});
     });
     peer.on('disconnected',()=>{live=false;badge();setTimeout(()=>{try{if(!peer.destroyed)peer.reconnect()}catch(e){}},1500)});
-    peer.on('error',e=>{if(e&&e.type==='unavailable-id'){idRetry=(idRetry||0)+1;try{peer.destroy()}catch(x){}if(idRetry>=10){store.set('sd-tvid',null);idRetry=0;$('#netWarn').innerHTML='<div class="warn">예전 운동회 창이 아직 열려 있어서 <b>새 QR코드</b>를 만들었어요. 태블릿은 새 QR을 찍어 주세요. 다른 운동회 창은 닫아 주세요.</div>';peerWait=true;setTimeout(startPeer,500)}else{peerWait=true;setTimeout(startPeer,3000)}}
+    peer.on('error',e=>{if(e&&e.type==='unavailable-id'){idRetry=(idRetry||0)+1;try{peer.destroy()}catch(x){}if(idRetry>=4)$('#netWarn').innerHTML='<div class="warn">⚠️ <b>다른 곳에 운동회 TV 화면이 켜져 있어요.</b> 다른 컴퓨터나 다른 창의 운동회 화면을 모두 닫아 주세요. 닫으면 몇 초 뒤 저절로 연결돼요.</div>';peerWait=true;setTimeout(startPeer,3000)}
       else if(e&&e.type!=='peer-unavailable'){live=false;badge()}});
   }
   let slots=store.get('sd-slots',{}),tokN=store.get('sd-tokn',0);
