@@ -836,10 +836,10 @@ function phoneMain(){
    ========================================================= */
 function tvMain(){
   const GAMEVER=3,GDEF={tugSec:25,raceGoal:200,pakPer:150,relayLeg:30,flagCount:15,volleyPts:5,snowSec:60,openPer:80,volleyNeed:12,yutNeed:15};
-  const DEF=Object.assign({names:['청팀','백팀'],scores:[0,0],history:[],done:{},win:100,practice:false,phoneUrl:'',ver:GAMEVER,carLevel:'mid',carSec:60,archLevel:'mid',archArrows:3,matchWin:20,tugGoal:12,pakSec:60,raceSec:90,towerSec:40,towerPer:5},GDEF);
+  const DEF=Object.assign({names:['청팀','백팀'],scores:[0,0],history:[],done:{},win:100,practice:false,phoneUrl:'',ver:GAMEVER,carLevel:'mid',carSec:150,archLevel:'mid',archArrows:3,matchWin:20,tugGoal:12,pakSec:60,raceSec:90,towerSec:40,towerPer:5},GDEF);
   const RAW=store.get('fg-tv',{})||{};const S=Object.assign({},DEF,RAW);const save=()=>store.set('fg-tv',S);
   if(RAW.ver!==GAMEVER){Object.assign(S,GDEF);S.ver=GAMEVER;save()}
-  if(RAW.carV!==2){S.carSec=60;S.carV=2;save()}
+  if(RAW.carV!==3){S.carSec=150;S.carV=3;save()}
   if(RAW.steerV!==3){S.steerFlip=false;S.steerV=3;save()}
   if(RAW.raceV!==3){S.raceGoal=40;S.raceSec=150;S.raceV=3;save()}
   if(!S.phoneUrl){S.phoneUrl='https://ysmtko-code.github.io/undonghoe/';save()}
@@ -1859,10 +1859,11 @@ function tvMain(){
     /* ---- 코스 만들기 ---- */
     const segs=[];
     const add=(c,core)=>segs.push({i:segs.length,curve:c,core:core||null,spr:[],chk:false,arch:null});
-    const straight=n=>{for(let i=0;i<n;i++)add(0)};
+    const CK={easy:.82,mid:.94}[S.carLevel]||1,ck=n=>Math.max(1,Math.round(n*CK));
+    const straight=n=>{n=ck(n);for(let i=0;i<n;i++)add(0)};
     const ease=(a,b,p)=>a+(b-a)*(.5-Math.cos(p*Math.PI)/2);
-    const curve=(en,ho,le,c,z)=>{for(let i=0;i<en;i++)add(ease(0,c,i/en),i>en/2?z:null);for(let i=0;i<ho;i++)add(c,z);for(let i=0;i<le;i++)add(ease(c,0,i/le),i<le/2?z:null)};
-    straight(95);curve(25,40,25,2.4);straight(50);const ALL_OBS=[];let OBS=[];const ob=(d,x,lv)=>ALL_OBS.push({i:segs.length+d,x,lv});
+    const curve=(en,ho,le,c,z)=>{en=ck(en);ho=ck(ho);le=ck(le);for(let i=0;i<en;i++)add(ease(0,c,i/en),i>en/2?z:null);for(let i=0;i<ho;i++)add(c,z);for(let i=0;i<le;i++)add(ease(c,0,i/le),i<le/2?z:null)};
+    straight(95);curve(25,40,25,2.4);straight(50);const ALL_OBS=[];let OBS=[];const ob=(d,x,lv)=>ALL_OBS.push({i:segs.length+Math.round(d*CK),x,lv});
     ob(25,-.45,0);ob(55,.2,2);ob(85,.45,1);straight(110);curve(25,45,25,-4.6);
     ob(30,0,0);ob(60,.55,3);ob(90,-.5,0);ob(120,.1,2);ob(150,.5,1);straight(180);
     curve(20,35,20,3.4);curve(20,35,20,-3.4);ob(35,.4,0);ob(70,-.35,2);straight(90);curve(25,45,25,4.4);ob(30,-.3,1);ob(60,.45,3);ob(82,-.05,3);straight(100);
@@ -1977,15 +1978,15 @@ function tvMain(){
       return{t:lc(a.t,b.t,m),b:lc(a.b,b.b,m),dark:a.dark+(b.dark-a.dark)*m,rain:a.rain+(b.rain-a.rain)*m,snow:a.snow+(b.snow-a.snow)*m,sun:a.sun+(b.sun-a.sun)*m,lb:m>.5?b.lb:a.lb,storm:(m>.5?b:a)===WX.storm}}
     let flash=0;
     const OBSPR={};const LVI={easy:0,mid:1,hard:2,impossible:3};
-    function applyObs(){OBS=ALL_OBS.filter(o=>o.lv<=(LVI[S.carLevel]||0));Object.keys(OBSPR).forEach(k=>delete OBSPR[k]);
+    function applyObs(){OBS=S.carLevel==='easy'?[]:ALL_OBS.filter(o=>o.lv<=(LVI[S.carLevel]||0));Object.keys(OBSPR).forEach(k=>delete OBSPR[k]);
       const add=(i,img,x,w)=>{(OBSPR[i]=OBSPR[i]||[]).push({img,x,w})};
       OBS.forEach((o,j)=>{add(o.i-35,IMG.sign.O,o.x>0?-1.35:1.35,.3);add(o.i,j%2?IMG.drum:IMG.cone,o.x-.08,.17);add(o.i,j%2?IMG.cone:IMG.drum,o.x+.08,.17);add(o.i+1,IMG.cone,o.x,.13)})}
     applyObs();
     /* ---- 화면 ---- */
     $('#stage').innerHTML=`<div class="carbar"><span class="nm" id="cn0" style="${tstyle(0)}">${esc(S.names[0])}</span>
         <div class="ctrack"><i id="cm0" style="background:${TEAM[0].bg}"></i><i id="cm1" style="background:${TEAM[1].bg}"></i><b class="cfin">🏁</b></div>
-        <span class="nm" id="cn1" style="${tstyle(1)}">${esc(S.names[1])}</span><span class="ctime display" id="ctime">0:${String(S.carSec).padStart(2,'0')}</span></div>
-      <div class="sub" style="margin:4px 0 0">🎮 태블릿을 <b>핸들처럼 두 손으로 들고 기울이면</b> 차가 움직여요. 장애물을 피하고, 길 밖으로 나가지 마세요!</div>
+        <span class="nm" id="cn1" style="${tstyle(1)}">${esc(S.names[1])}</span><span class="ctime display" id="ctime">0:00</span></div>
+      <div class="sub" style="margin:4px 0 0">🎮 태블릿을 <b>핸들처럼 두 손으로 들고 기울이면</b> 차가 움직여요. ${S.carLevel==='easy'?'<b>장애물 없음</b> · 커브를 잘 돌고 길 밖으로 나가지 않는 사람이 빨라요!':'장애물을 피하고, 길 밖으로 나가지 마세요!'}</div>
       ${levelBar('🚗 속도',LV,S.carLevel,'data-lv')}
       <div class="carwrap"><canvas id="carc"></canvas>
         <div class="tlight hidden" id="tl"><div class="lamps"><span></span><span></span><span></span></div><div class="tn" id="tlnum"></div></div>
@@ -2309,15 +2310,15 @@ function tvMain(){
     /* ---- 진행 ---- */
     const matches=()=>{const L=onlineList();const m=Math.max(1,...L.map(p=>p.num||0));return m};
     function drawMatches(){
-      const L=onlineList(),N=matches();if(carMatch!=='T'&&carMatch>N)carMatch=1;
+      const L=onlineList(),N=matches();if(carMatch==='T'||carMatch>N)carMatch=1;
       $('#cmatch').innerHTML=Array.from({length:N},(_,i)=>{const n=i+1,r=carResults[n],a=pickRacer(L,0,n),b=pickRacer(L,1,n);
         return `<button data-m="${n}" class="${n===carMatch?'on':''}">${n}번 대결 · ${rName(a,0)} vs ${rName(b,1)}${r?(r.w==null?' · 무승부':` · ${esc(S.names[r.w].slice(0,1))} 승`):''}</button>`}).join('');
-      const rt=carResults.T;$('#cmatch').innerHTML+=`<button data-m="T" class="${carMatch==='T'?'on':''}" style="border-color:var(--yellow)">🚗 단체전 · 모두 출전${rt?(rt.w==null?' · 무승부':` · ${esc(S.names[rt.w].slice(0,1))} 승`):''}</button>`;
+
       $('#cmatch').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{if(running)return;carMatch=b.dataset.m==='T'?'T':+b.dataset.m;setup();drawMatches();$('#cres').classList.add('hidden')});
       const w=[0,1].map(k=>Object.values(carResults).filter(r=>r.w===k).length);$('#cfinal').textContent=`레이스 종합 발표 · 보너스 +${S.win} (${S.names[0].slice(0,1)} ${w[0]}승 : ${S.names[1].slice(0,1)} ${w[1]}승)`;
     }
     let teamRaceN=0;
-    function setup(){lamps=0;$('#stage').classList.toggle('c1',!isTeam());applyObs();applyTheme(isTeam()?TH_ORDER[(teamRaceN++)%TH_ORDER.length]:TH_ORDER[((carMatch|0)-1+600)%TH_ORDER.length]);camLead=null;camSP=10;$('#ctime').textContent=`0:${String(S.carSec).padStart(2,'0')}`;
+    function setup(){lamps=0;$('#stage').classList.toggle('c1',!isTeam());applyObs();applyTheme(isTeam()?TH_ORDER[(teamRaceN++)%TH_ORDER.length]:TH_ORDER[((carMatch|0)-1+600)%TH_ORDER.length]);camLead=null;camSP=10;$('#ctime').textContent='0:00';
       if(isTeam()){newTeam(onlineList());buildDots();$('#go').textContent='🚗 단체전 시작';setH({racers:{0:'*',1:'*'},carMatch:'T',carHintP:{}});return}
       const L=onlineList();newCars(pickRacer(L,0,carMatch),pickRacer(L,1,carMatch));buildDots();
       $('#go').textContent=`${carMatch}번 대결 시작`;
@@ -2353,7 +2354,7 @@ function tvMain(){
       cr.innerHTML=w==null?`<div class="w display" style="--bg:#F4B400;--fg:#1B2430">무승부!</div>`:`<div class="w display" style="${tstyle(w)}">🏆 ${esc(label(cars[w]))} 승리!</div>`;
       cr.innerHTML+=`<div class="d">${esc(label(a))}: ${res(a)} · ${esc(label(b))}: ${res(b)}</div>`;
       SFX.whistle(.7);setTimeout(()=>{SFX.fanfare();SFX.cheer()},300);if(w!=null)confetti([TEAM[w].bg,'#F4B400','#fff']);
-      const N=matches();let nx=null;for(let i=1;i<=N;i++){const c=(carMatch+i-1)%N+1;if(!carResults[c]){nx=c;break}}carMatch=nx!=null?nx:(carResults.T?carMatch:'T');
+      const N=matches();let nx=null;for(let i=1;i<=N;i++){const c=(carMatch+i-1)%N+1;if(!carResults[c]){nx=c;break}}carMatch=nx!=null?nx:carMatch;
       drawMatches();$('#go').textContent=carMatch==='T'?'🚗 단체전 준비':`${carMatch}번 대결 시작`;setH({carHint:{0:'finish',1:'finish'}});
     }
     let lastNow=0,lastHP=0,lastMM=0;
@@ -2368,8 +2369,9 @@ function tvMain(){
         if(isTeam()){if(now-lastHP>350){lastHP=now;const rk=ranking(),m={};rk.forEach((c,i)=>{if(c.pid)m[c.pid]=[c.hint,i+1,rk.length]});setH({carHintP:m})}}
         else if(hs[0]!==lastHint[0]||hs[1]!==lastHint[1]){lastHint=hs.slice();setH({carHint:{0:hs[0],1:hs[1]}})}
         (isTeam()?ranking().slice(0,2).map((c,i)=>Object.assign({},c,{k:i})):cars).forEach(c=>audEngine(c.k,c.speed/VMAX,c.crash>0,c.off?.7:Math.min(.5,Math.abs((segs[Math.floor(c.pos)]||{curve:0}).curve)*Math.abs(c.steer)*.12)));
-        const left=Math.max(0,S.carSec-el);$('#ctime').textContent=`0:${String(Math.ceil(left)).padStart(2,'0')}`;
-        if(cars.every(c=>c.fin!=null)||el>=S.carSec||forceEnd)endRace(el);
+        $('#ctime').textContent=`${Math.floor(el/60)}:${String(Math.floor(el%60)).padStart(2,'0')}`;
+        const f1=Math.min(...cars.map(c=>c.fin==null?Infinity:c.fin)),wait=isTeam()?20:4;
+        if(cars.every(c=>c.fin!=null)||(f1<Infinity&&el-f1>=wait)||el>=S.carSec||forceEnd)endRace(el);
       }
       draw();
     };
@@ -2573,7 +2575,7 @@ function tvMain(){
       <div class="gs"><b>줄다리기 (3판 2선승)</b><label>한 판 시간 (초)<input type="number" id="ts" value="${S.tugSec}"></label><label>결승선 (1인 평균 몇 번 차이)<input type="number" id="tg" value="${S.tugGoal}"></label></div>
       <div class="gs"><b>이어달리기</b><label>한 구간에 두드리는 횟수 (한 사람)<input type="number" id="rg" value="${S.raceGoal}"></label><label>최대 시간 (초)<input type="number" id="rcs" value="${S.raceSec}"></label></div>
       <div class="gs"><b>윷놀이</b><label>윷 한 번 던지는 횟수 (1인당)<input type="number" id="yn" value="${S.yutNeed}"></label></div>
-      <div class="gs"><b>자동차 레이스</b><label>한 경기 시간 (초)<input type="number" id="cs2" value="${S.carSec}"></label>
+      <div class="gs"><b>자동차 레이스</b><label>최대 시간 (초) · 보통은 결승선에서 끝나요<input type="number" id="cs2" value="${S.carSec}"></label>
         <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="sflip" ${S.steerFlip?'checked':''} style="width:22px;height:22px"> 핸들 방향 반대로 (기울인 쪽과 차가 반대로 갈 때만)</label><label>속도<select id="carLevel">${[['easy','쉬움 (EASY)'],['mid','보통 (MID)'],['hard','어려움 (HARD)'],['impossible','선생님용 (IMPOSSIBLE)']].map(([k,t])=>`<option value="${k}" ${S.carLevel===k?'selected':''}>${t}</option>`).join('')}</select></label></div>
       <div class="gs"><b>양궁</b><label>한 사람이 쏘는 화살 수<input type="number" id="aa" value="${S.archArrows}"></label><label>난이도<select id="archLevel">${[['easy','쉬움 (EASY)'],['mid','보통 (MID)'],['hard','어려움 (HARD)'],['impossible','선생님용 (IMPOSSIBLE)']].map(([k,t])=>`<option value="${k}" ${S.archLevel===k?'selected':''}>${t}</option>`).join('')}</select></label></div>
       </div>
@@ -2594,7 +2596,7 @@ function tvMain(){
       S.names=[$('#n0').value.trim()||'청팀',$('#n1').value.trim()||'백팀'];S.win=v('wn',100,0,10000);S.matchWin=v('mw',20,0,10000);
       S.openPer=v('op',80,5,1000);S.flagCount=v('fl',15,3,40);S.snowSec=v('ss',60,10,300);S.towerSec=v('tws',40,10,180);S.towerPer=v('twp',5,1,50);
       S.pakPer=v('pp',150,5,2000);S.pakSec=v('pks',60,10,300);S.tugSec=v('ts',25,10,120);S.tugGoal=v('tg',12,3,200);S.raceGoal=v('rg',40,5,500);S.raceSec=v('rcs',150,30,600);
-      store.set('sd-voice',{name:$('#vname').value,rate:+$('#vrate').value});S.yutNeed=v('yn',15,3,200);S.carSec=v('cs2',60,20,180);S.steerFlip=$('#sflip').checked;S.carLevel=$('#carLevel').value;S.archArrows=v('aa',3,1,5);S.archLevel=$('#archLevel').value;
+      store.set('sd-voice',{name:$('#vname').value,rate:+$('#vrate').value});S.yutNeed=v('yn',15,3,200);S.carSec=v('cs2',150,60,300);S.steerFlip=$('#sflip').checked;S.carLevel=$('#carLevel').value;S.archArrows=v('aa',3,1,5);S.archLevel=$('#archLevel').value;
       save();closeModal();
       if(wasPractice!==S.practice){location.reload();return}
       H.names=S.names;renderBoard();netWarn();badge();go(H.game);
